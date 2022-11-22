@@ -1,19 +1,23 @@
 const std = @import("std");
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const stdout = std.io.getStdOut().writer();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const file_name = ".github/workflows/linting.yml";
+    const file = try std.fs.cwd().openFile(file_name, .{});
+    defer file.close();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    const file_size = try file.getEndPos();
+    try stdout.print("file size: {d}\n", .{file_size});
 
-    try bw.flush(); // don't forget to flush!
+    var reader = std.io.bufferedReader(file.reader());
+    var instream = reader.reader();
+
+    const allocator = std.heap.page_allocator;
+    const contents = try instream.readAllAlloc(allocator, file_size);
+    defer allocator.free(contents);
+
+    try stdout.print("read file value: {c}", .{contents});
 }
 
 test "simple test" {
